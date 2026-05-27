@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Betta Fish Game</title>
+
+<style>
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+-webkit-user-select: none;
+user-select: none;
+font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+html,body{
+width:100%;
+height:100%;
+overflow:hidden;
+background:black;
+}
+
+body{
+position:relative;
+}
+
+/* ဒေါင်လိုက် Loading ပုံ အပြည့် နေရာလွတ်မရှိရ */
+#loadingScreen{
+position:fixed;
+width:100%;
+height:100%;
+background:url('Loading_00.png') center center/cover no-repeat;
+z-index:9999;
+display:flex;
+justify-content:center;
+align-items:center;
+flex-direction:column;
+}
+
+.loader{
+width:65px;
+height:65px;
+border:6px solid rgba(255,255,255,0.2);
+border-top:6px solid #e11d48;
+border-radius:50%;
+animation:spin 1s linear infinite;
+margin-bottom:40px;
+box-shadow: 0 0 15px rgba(225,29,72,0.5);
+}
+
+@keyframes spin{
+100%{ transform:rotate(360deg); }
+}
+
+#playBtn{
+width:100px;
+cursor: pointer;
+display:none;
+transition: transform 0.2s;
+}
+#playBtn:active { transform: scale(0.9); }
+
+#game{
+width:100%;
+height:100%;
+position:relative;
+overflow:hidden;
+display:none;
+background:url('1_bg.jpg') center center/cover no-repeat;
+transition: background-image 0.5s ease-in-out;
+}
+
+/* UI ခလုတ်များ နေရာအထားအသို */
+.uiBtn{
+position:absolute;
+width:55px;
+z-index:50;
+cursor: pointer;
+transition: transform 0.2s;
+}
+.uiBtn:active{ transform: scale(0.9); }
+
+#settingBtn{ right:15px; top:15px; }
+#shopBtn{ right:15px; top:80px; }
+#swapBtn{
+position:absolute;
+top:15px;
+left:50%;
+transform:translateX(-50%);
+width:55px;
+z-index:50;
+cursor: pointer;
+}
+
+/* ဘယ်ဘက်အပေါ်ဒေါင့် Status UI (Icon များဖြင့် လှပသေသပ်သော) */
+.statusContainer {
+position: absolute;
+left: 15px;
+z-index: 50;
+display: flex;
+align-items: center;
+gap: 6px;
+text-shadow: 2px 2px 4px rgba(0,0,0,0.9);
+font-weight: bold;
+}
+#levelContainer { top: 15px; color: white; font-size: 13px; }
+#coinContainer { top: 38px; color: #fbbf24; font-size: 13px; }
+#diamondContainer { top: 61px; color: #22d3ee; font-size: 13px; cursor: pointer; }
+
+.statusIcon {
+width: 18px;
+height: 18px;
+object-fit: contain;
+}
+
+/* အောက်ခြေ Sale နှင့် Feed ခလုတ်များနှင့် စာသားများ */
+.actionWrapper {
+position: absolute;
+bottom: 20px;
+display: flex;
+flex-direction: column;
+align-items: center;
+z-index: 50;
+gap: 2px;
+}
+#saleWrapper { left: 18%; }
+#feedWrapper { right: 18%; }
+
+.actionBtn {
+width: 80px;
+cursor: pointer;
+transition: transform 0.2s;
+}
+.actionBtn:active{ transform: scale(0.9); }
+
+.actionLabel {
+color: white;
+font-size: 11px;
+font-weight: bold;
+text-shadow: 1px 1px 3px black;
+letter-spacing: 0.5px;
+}
+
+/* ကြီးထွားမှုပြကွက် Live Timer */
+#growthTimerText {
+position: absolute;
+bottom: 50px;
+left: 50%;
+transform: translateX(-50%);
+color: #67e8f9;
+font-size: 14px;
+font-weight: bold;
+text-shadow: 2px 2px 4px rgba(0,0,0,1);
+background: rgba(0,0,0,0.4);
+padding: 4px 12px;
+border-radius: 12px;
+z-index: 45;
+pointer-events: none;
+letter-spacing: 0.5px;
+display: none;
+}
+
+/* ကန်အထက်နားရှိ အစာထုပ်သေးလေး */
+#miniFoodBag {
+position: absolute;
+top: 90px;
+left: 50%;
+transform: translateX(-50%);
+width: 40px;
+z-index: 40;
+display: none;
+text-align: center;
+}
+#miniFoodBag img { width: 100%; }
+#foodCountBadge {
+background: red;
+color: white;
+font-size: 10px;
+border-radius: 50%;
+padding: 1px 5px;
+position: absolute;
+top: -5px;
+right: -5px;
+font-weight: bold;
+}
+
+/* ငါး ရေကူးခြင်းနှင့် အရိပ် Container */
+.fishContainer {
+position: absolute;
+width: 75px;
+height: 75px;
+z-index: 20;
+pointer-events: none;
+}
+
+.fishImg {
+width: 100%;
+height: 100%;
+object-fit: contain;
+position: absolute;
+top: 0;
+left: 0;
+}
+
+/* ငါးအရိပ်စနစ် */
+.fishShadow {
+width: 60px;
+height: 12px;
+background: rgba(0, 0, 0, 0.25);
+border-radius: 50%;
+position: absolute;
+bottom: -15px;
+left: 7.5px;
+filter: blur(2px);
+transition: transform 0.3s;
+}
+
+/* Menu ပုံစံများ */
+.menu{
+position:absolute;
+width:92%;
+height:80%;
+left:4%;
+top:10%;
+background:url('Shop_menu_00.png') center center/cover no-repeat;
+z-index:100;
+display:none;
+border-radius:20px;
+box-shadow: 0 10px 25px rgba(0,0,0,0.7);
+}
+
+/* လှပသော Cancel ခလုတ် */
+.cancelBtn{
+position:absolute;
+right:-10px;
+top:-10px;
+width:45px;
+z-index:200;
+cursor: pointer;
+transition: transform 0.2s;
+}
+.cancelBtn:hover { transform: scale(1.1); }
+
+.tabs{
+position:absolute;
+left:15px;
+top:60px;
+width:100px;
+height:calc(100% - 80px);
+display:flex;
+flex-direction:column;
+gap: 10px;
+}
+
+.tab{
+padding:12px 5px;
+color:white;
+font-weight:bold;
+text-align:center;
+background: rgba(255,255,255,0.1);
+border-radius: 10px;
+font-size: 14px;
+cursor: pointer;
+border: 1px solid rgba(255,255,255,0.2);
+}
+.tab.active {
+background: #e11d48;
+border-color: white;
+}
+
+.shopContent{
+margin-left:125px;
+margin-top: 60px;
+padding:10px;
+display:flex;
+flex-wrap:wrap;
+gap:15px;
+overflow-y:auto;
+height:calc(100% - 80px);
+}
+
+.itemCard{
+width:110px;
+background:rgba(0, 0, 0, 0.4);
+border: 1px solid rgba(255,255,255,0.1);
+border-radius:12px;
+padding:8px;
+text-align:center;
+color:white;
+font-size: 12px;
+display: flex;
+flex-direction: column;
+justify-content: space-between;
+align-items: center;
+}
+
+.itemCard img{
+width:75px;
+height:75px;
+object-fit:contain;
+margin-bottom: 5px;
+}
+
+.buyBtn{
+margin-top:5px;
+padding:6px 12px;
+border:none;
+border-radius:8px;
+background:#22c55e;
+color: white;
+font-weight:bold;
+font-size: 11px;
+cursor: pointer;
+width: 100%;
+}
+.buyBtn:disabled {
+background: #6b7280;
+cursor: not-allowed;
+}
+
+#swapMenu{
+position:absolute;
+top:75px;
+left:50%;
+transform:translateX(-50%);
+display:none;
+flex-direction:row;
+gap:8px;
+z-index:150;
+background: rgba(0,0,0,0.6);
+padding: 8px;
+border-radius: 10px;
+}
+
+.swapNumber{
+width:35px;
+height:35px;
+cursor: pointer;
+transition: transform 0.1s;
+}
+.swapNumber:active { transform: scale(0.9); }
+
+#settingMenu{
+position:absolute;
+width:280px;
+height:180px;
+background:rgba(0,0,0,0.9);
+border: 2px solid #555;
+left:50%;
+top:50%;
+transform:translate(-50%,-50%);
+border-radius:20px;
+z-index:200;
+display:none;
+color:white;
+padding:20px;
+text-align: center;
+}
+
+#settingMenu h2 { font-size: 20px; margin-bottom: 20px; }
+.volBtn {
+padding: 10px 25px;
+font-size: 16px;
+background: #e11d48;
+color: white;
+border: none;
+border-radius: 10px;
+cursor: pointer;
+font-weight: bold;
+}
+
+#diamondShop{
+position:absolute;
+width:80%;
+height:60%;
+left:10%;
+top:20%;
+background:rgba(0,0,0,0.95);
+border: 2px solid #22d3ee;
+z-index:250;
+display:none;
+color:white;
+flex-direction: column;
+justify-content:center;
+align-items:center;
+border-radius:20px;
+}
+</style>
+</head>
+<body>
+
+<div id="loadingScreen">
+<div class="loader"></div>
+<img src="Play_button00.png" id="playBtn" alt="Play">
+</div>
+
+<div id="game">
+
+<div id="levelContainer" class="statusContainer">
+<span>Level</span> <span id="levelText">1</span>
+</div>
+<div id="coinContainer" class="statusContainer">
+<img src="Coin_00.png" class="statusIcon"> <span id="coinText">2000</span>
+</div>
+<div id="diamondContainer" class="statusContainer">
+<img src="Diamond_00.png" class="statusIcon"> <span id="diamondText">0</span>
+</div>
+
+<img src="Setting_button00.png" class="uiBtn" id="settingBtn">
+<img src="Shop_00.png" class="uiBtn" id="shopBtn">
+
+<img src="Background_swap.png" id="swapBtn">
+
+<div id="miniFoodBag">
+<img src="Food_01.png" id="miniFoodImg">
+<span id="foodCountBadge">7</span>
+</div>
+
+<div id="growthTimerText">00h 00m 00s</div>
+
+<div id="saleWrapper" class="actionWrapper">
+<img src="Sale_00.png" id="saleBtn" class="actionBtn">
+<span class="actionLabel">SALE</span>
+</div>
+
+<div id="feedWrapper" class="actionWrapper">
+<img src="Feed_00.png" id="feedBtn" class="actionBtn">
+<span class="actionLabel">FEED</span>
+</div>
+
+<div id="swapMenu">
+<img src="1.png" class="swapNumber" onclick="changeBg(1)">
+<img src="2.png" class="swapNumber" onclick="changeBg(2)">
+<img src="3.png" class="swapNumber" onclick="changeBg(3)">
+<img src="4.png" class="swapNumber" onclick="changeBg(4)">
+<img src="5.png" class="swapNumber" onclick="changeBg(5)">
+</div>
+
+<div id="shopMenu" class="menu">
+<img src="Cancel_button00.png" class="cancelBtn" onclick="closeShop()">
+<div class="tabs">
+<div class="tab active" id="tabFish" onclick="switchTab('fish')">Fish</div>
+<div class="tab" id="tabFood" onclick="switchTab('food')">Food</div>
+<div class="tab" id="tabSfish" onclick="switchTab('sfish')">S-fish</div>
+</div>
+<div class="shopContent" id="shopContent"></div>
+</div>
+
+<div id="settingMenu">
+<img src="Cancel_button00.png" class="cancelBtn" onclick="closeSetting()">
+<h2>Volume</h2>
+<button class="volBtn" onclick="toggleMusic()">ON / OFF</button>
+</div>
+
+<div id="diamondShop">
+<img src="Cancel_button00.png" class="cancelBtn" onclick="closeDiamondShop()">
+<p style="font-size:20px; color:#22d3ee; font-weight:bold;">Diamond Shop</p>
+<p style="font-size:14px; margin-top:10px; color:#aaa;">Coming Soon</p>
+</div>
+
+</div>
+
+<audio id="bgm" loop>
+<source src="bg_music.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+// ဂိမ်းအချက်အလက်စနစ် (Starting Coin: 2000)
+let gameData = JSON.parse(localStorage.getItem('bettaGame_v3')) || {
+coin: 3000, 
+diamond: 0,
+level: 1,
+currentTank: 1,
+totalFoodsBought: 0,
+tanks: {
+1: null,
+2: null,
+3: null,
+4: null,
+5: null
+},
+currentFeedBag: null
+};
+
+let musicOn = true;
+let fishSwimIntervals = {};
+
+const playBtn = document.getElementById('playBtn');
+const loadingScreen = document.getElementById('loadingScreen');
+const game = document.getElementById('game');
+const bgm = document.getElementById('bgm');
+const shopMenu = document.getElementById('shopMenu');
+const shopContent = document.getElementById('shopContent');
+
+setTimeout(()=>{
+playBtn.style.display='block';
+}, 3000);
+
+playBtn.onclick = ()=>{
+loadingScreen.style.display='none';
+game.style.display='block';
+if(musicOn) bgm.play();
+updateUI();
+renderCurrentTank();
+setInterval(gameLoop, 1000);
+}
+
+function saveGame(){
+localStorage.setItem('bettaGame_v3', JSON.stringify(gameData));
+}
+
+function updateUI(){
+document.getElementById('coinText').innerText = gameData.coin;
+document.getElementById('diamondText').innerText = gameData.diamond;
+document.getElementById('levelText').innerText = gameData.level;
+game.style.backgroundImage = `url('${gameData.currentTank}_bg.jpg')`;
+
+const miniBag = document.getElementById('miniFoodBag');
+if(gameData.currentFeedBag) {
+document.getElementById('miniFoodImg').src = gameData.currentFeedBag.type + '.png';
+document.getElementById('foodCountBadge').innerText = gameData.currentFeedBag.clicksLeft;
+miniBag.style.display = 'block';
+} else {
+miniBag.style.display = 'none';
+}
+
+updateGrowthTimerUI();
+}
+
+function updateGrowthTimerUI() {
+const timerTextDiv = document.getElementById('growthTimerText');
+let currentFish = gameData.tanks[gameData.currentTank];
+
+if (currentFish) {
+timerTextDiv.style.display = 'block';
+if (currentFish.isBaby) {
+let timeLeftMs = currentFish.growDuration - (Date.now() - currentFish.boughtTime);
+if (timeLeftMs > 0) {
+let totalSeconds = Math.floor(timeLeftMs / 1000);
+let hours = Math.floor(totalSeconds / 3600);
+let minutes = Math.floor((totalSeconds % 3600) / 60);
+let seconds = totalSeconds % 60;
+
+let hStr = hours < 10 ? '0' + hours : hours;
+let mStr = minutes < 10 ? '0' + minutes : minutes;
+let sStr = seconds < 10 ? '0' + seconds : seconds;
+
+timerTextDiv.innerText = `${hStr}h ${mStr}m ${sStr}s`;
+} else {
+timerTextDiv.innerText = "Adult";
+}
+} else {
+timerTextDiv.innerText = "Adult";
+}
+} else {
+timerTextDiv.style.display = 'none';
+}
+}
+
+document.getElementById('diamondContainer').onclick = () => {
+document.getElementById('diamondShop').style.display = 'flex';
+};
+function closeDiamondShop(){
+document.getElementById('diamondShop').style.display = 'none';
+}
+
+document.getElementById('shopBtn').onclick = () => {
+shopMenu.style.display = 'block';
+switchTab('fish');
+};
+function closeShop(){ shopMenu.style.display = 'none'; }
+
+document.getElementById('settingBtn').onclick = () => {
+document.getElementById('settingMenu').style.display = 'block';
+};
+function closeSetting(){ document.getElementById('settingMenu').style.display = 'none'; }
+
+function switchTab(tabName) {
+document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+if(tabName === 'fish') {
+document.getElementById('tabFish').classList.add('active');
+showFishShop();
+} else if(tabName === 'food') {
+document.getElementById('tabFood').classList.add('active');
+showFoodShop();
+} else if(tabName === 'sfish') {
+document.getElementById('tabSfish').classList.add('active');
+showSfishShop();
+}
+}
+
+// Fixed Syntax Error Here
+function showFishShop(){
+shopContent.innerHTML = '';
+const fishes = [
+['betta_adult_01.png', 300], ['betta_adult_02.png', 300],
+['betta_adult_03.png', 300], ['betta_adult_04.png', 400],
+['betta_adult_05.png', 300], ['betta_adult_06.png', 400],
+['betta_adult_07.png', 300], ['betta_adult_08.png', 300]
+];
+fishes.forEach(f => {
+let div = document.createElement('div');
+div.className = 'itemCard';
+div.innerHTML = `
+<img src="${f[0]}">
+<div style="font-weight:bold;margin-bottom:3px;">${f[1]} Coin</div>
+<button class="buyBtn" onclick="buyFish('${f[0]}', ${f[1]})">BUY</button>
+`;
+shopContent.appendChild(div);
+});
+}
+
+function showFoodShop(){
+shopContent.innerHTML = '';
+const foods = [
+['Food_01.png', 400, 'coin'], ['Food_02.png', 800, 'coin'], ['Food_03.png', 500, 'diamond']
+];
+foods.forEach(f => {
+let div = document.createElement('div');
+div.className = 'itemCard';
+div.innerHTML = `
+<img src="${f[0]}">
+<div style="font-weight:bold;margin-bottom:3px;">${f[1]} ${f[2].toUpperCase()}</div>
+<button class="buyBtn" onclick="buyFood('${f[0].replace('.png','')}', ${f[1]}, '${f[2]}')">BUY</button>
+`;
+shopContent.appendChild(div);
+});
+}
+
+function showSfishShop(){
+shopContent.innerHTML = '';
+const sfish = [
+['Sbetta_adult_01.png', 500, 1, 2*24*60*60*1000],
+['Sbetta_adult_02.png', 600, 3, (2*24 + 12)*60*60*1000],
+['Sbetta_adult_03.png', 700, 4, 3*24*60*60*1000],
+['Sbetta_adult_04.png', 800, 5, (3*24 + 12)*60*60*1000]
+];
+sfish.forEach(f => {
+let locked = gameData.level < f[2];
+let div = document.createElement('div');
+div.className = 'itemCard';
+div.innerHTML = `
+<img src="${f[0]}" style="opacity:${locked ? 0.2 : 1}">
+<div style="font-weight:bold;">${f[1]} Dia</div>
+<div style="color:#ef4444; font-size:10px;">${locked ? 'LOCKED Lv ' + f[2] : ''}</div>
+<button class="buyBtn" ${locked ? 'disabled' : ''} onclick="buySfish('${f[0]}', ${f[1]}, ${f[3]})">BUY</button>
+`;
+shopContent.appendChild(div);
+});
+}
+
+function findEmptyTank() {
+for(let i=1; i<=5; i++){ if(gameData.tanks[i] === null) return i; }
+return null;
+}
+
+function buyFish(imgName, price){
+if(gameData.coin < price) return;
+let targetTank = findEmptyTank();
+if(targetTank === null) {
+alert("All fish tanks are full!");
+return;
+}
+gameData.coin -= price;
+gameData.tanks[targetTank] = {
+img: imgName, isBaby: true, boughtTime: Date.now(),
+growDuration: 24*60*60*1000, lastFedTime: Date.now(),
+isSpecial: false, price: price, lastCoinGenerated: Date.now()
+};
+gameData.currentTank = targetTank;
+saveGame(); updateUI(); renderCurrentTank(); closeShop();
+}
+
+function buySfish(imgName, price, growTime){
+if(gameData.diamond < price) return;
+let targetTank = findEmptyTank();
+if(targetTank === null) {
+alert("All fish tanks are full!");
+return;
+}
+gameData.diamond -= price;
+gameData.tanks[targetTank] = {
+img: imgName, isBaby: true, boughtTime: Date.now(),
+growDuration: growTime, lastFedTime: Date.now(),
+isSpecial: true, price: price, lastCoinGenerated: Date.now()
+};
+gameData.currentTank = targetTank;
+saveGame(); updateUI(); renderCurrentTank(); closeShop();
+}
+
+function buyFood(foodType, price, currency){
+if(currency === 'coin') {
+if(gameData.coin < price) return;
+gameData.coin -= price;
+} else {
+if(gameData.diamond < price) return;
+gameData.diamond -= price;
+}
+
+gameData.currentFeedBag = { type: foodType, clicksLeft: 7 };
+gameData.totalFoodsBought += 1;
+let requiredFoods = 5 * gameData.level;
+if(gameData.totalFoodsBought >= requiredFoods) {
+gameData.level += 1;
+gameData.totalFoodsBought = 0;
+}
+saveGame(); updateUI(); closeShop();
+}
+
+function renderCurrentTank() {
+if(fishSwimIntervals[gameData.currentTank]) {
+clearInterval(fishSwimIntervals[gameData.currentTank]);
+}
+document.querySelectorAll('.fishContainer').forEach(f => f.remove());
+
+let currentFish = gameData.tanks[gameData.currentTank];
+if(!currentFish) {
+updateGrowthTimerUI();
+return;
+}
+
+let container = document.createElement('div');
+container.className = 'fishContainer';
+container.style.left = '45%';
+container.style.top = '45%';
+
+let img = document.createElement('img');
+img.className = 'fishImg';
+img.src = currentFish.isBaby ? 'betta_baby_base.png' : currentFish.img;
+
+let shadow = document.createElement('div');
+shadow.className = 'fishShadow';
+
+container.appendChild(img);
+container.appendChild(shadow);
+game.appendChild(container);
+
+let currentX = 45;
+let currentY = 45;
+
+function moveFishGentle() {
+let dx = (Math.random() * 24) - 12;
+let dy = (Math.random() * 20) - 10;
+
+let nextX = currentX + dx;
+let nextY = currentY + dy;
+
+if(nextX < 15) nextX = 20;
+if(nextX > 75) nextX = 70;
+if(nextY < 25) nextY = 30;
+if(nextY > 65) nextY = 60;
+
+container.style.transition = 'all 4s ease-in-out';
+container.style.left = nextX + '%';
+container.style.top = nextY + '%';
+
+if(nextX > currentX) {
+img.style.transform = 'scaleX(-1)'; 
+shadow.style.transform = 'scaleX(-1)';
+} else {
+img.style.transform = 'scaleX(1)';  
+shadow.style.transform = 'scaleX(1)';
+}
+
+currentX = nextX;
+currentY = nextY;
+}
+
+moveFishGentle();
+fishSwimIntervals[gameData.currentTank] = setInterval(moveFishGentle, 4500);
+updateGrowthTimerUI();
+}
+
+document.getElementById('feedBtn').onclick = () => {
+let currentFish = gameData.tanks[gameData.currentTank];
+if(!currentFish) {
+alert("There is no fish in this tank to feed!");
+return;
+}
+if(!gameData.currentFeedBag) {
+alert("No food bag available! Please purchase from the Shop.");
+return;
+}
+
+gameData.currentFeedBag.clicksLeft -= 1;
+currentFish.lastFedTime = Date.now();
+
+let reductionMinutes = 0;
+if(gameData.currentFeedBag.type === 'Food_01') reductionMinutes = 1;
+if(gameData.currentFeedBag.type === 'Food_02') reductionMinutes = 3;
+if(gameData.currentFeedBag.type === 'Food_03') reductionMinutes = 5;
+
+currentFish.boughtTime -= (reductionMinutes * 60 * 1000);
+
+if(gameData.currentFeedBag.clicksLeft <= 0) {
+gameData.currentFeedBag = null;
+}
+
+saveGame(); updateUI(); checkFishGrowth();
+};
+
+document.getElementById('saleBtn').onclick = () => {
+let currentFish = gameData.tanks[gameData.currentTank];
+if(!currentFish) {
+alert("There is no fish to sell!");
+return;
+}
+if(currentFish.isBaby) {
+alert("Baby betta cannot be sold yet!");
+return;
+}
+
+let sellReward = currentFish.price + 20;
+gameData.coin += sellReward;
+gameData.tanks[gameData.currentTank] = null;
+
+saveGame(); updateUI(); renderCurrentTank();
+alert(`Successfully sold the fish for ${sellReward} Coins!`);
+};
+
+function checkFishGrowth() {
+let changed = false;
+for(let i=1; i<=5; i++) {
+let fish = gameData.tanks[i];
+if(fish && fish.isBaby) {
+let timePassed = Date.now() - fish.boughtTime;
+if(timePassed >= fish.growDuration) {
+fish.isBaby = false;
+changed = true;
+if(fish.isSpecial) gameData.level += 1;
+}
+}
+}
+if(changed) {
+saveGame(); updateUI(); renderCurrentTank();
+}
+}
+
+function gameLoop() {
+let changed = false;
+let now = Date.now();
+
+for(let i=1; i<=5; i++) {
+let fish = gameData.tanks[i];
+if(fish) {
+if(now - fish.lastFedTime > 24*60*60*1000) {
+gameData.tanks[i] = null;
+changed = true;
+continue;
+}
+
+if(!fish.isBaby) {
+let coinInterval = 30 * 60 * 1000;
+let timeSinceLastCoin = now - fish.lastCoinGenerated;
+if(timeSinceLastCoin >= coinInterval) {
+let intervalsEarned = Math.floor(timeSinceLastCoin / coinInterval);
+if(fish.isSpecial) {
+gameData.coin += (intervalsEarned * 200);
+} else {
+gameData.coin += (intervalsEarned * 50);
+}
+fish.lastCoinGenerated = now;
+changed = true;
+}
+}
+}
+}
+
+checkFishGrowth();
+updateGrowthTimerUI();
+
+if(changed) {
+saveGame(); updateUI(); renderCurrentTank();
+}
+}
+
+document.getElementById('swapBtn').onclick = () => {
+let menu = document.getElementById('swapMenu');
+menu.style.display = (menu.style.display === 'flex') ? 'none' : 'flex';
+};
+
+function changeBg(num){
+gameData.currentTank = num;
+document.getElementById('swapMenu').style.display = 'none';
+saveGame(); updateUI(); renderCurrentTank();
+}
+
+function toggleMusic(){
+if(bgm.paused){ bgm.play(); musicOn = true; } else { bgm.pause(); musicOn = false; }
+}
+
+window.addEventListener('beforeunload', () => { bgm.pause(); });
+document.addEventListener("visibilitychange", () => {
+if (document.hidden) { bgm.pause(); } else { if(musicOn && game.style.display === 'block') bgm.play(); }
+});
+
+updateUI();
+</script>
+
+</body>
+</html>
